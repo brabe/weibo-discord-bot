@@ -83,9 +83,47 @@ python app.py
    
    [status]
        message_webhook = "YOUR_STATUS_WEBHOOK_URL"
+
+      [translation]
+         enabled = false
+         target_language = "en"
+         provider = "googletrans"
+         timeout_seconds = 8
    ```
 
 - Method selection is set in code: edit `core/settings.py` and change `EXTRACTION_METHOD` to `"ajax_json"` or `"mobile_dom"`.
+
+### Runtime environment variables
+
+You can also provide the same configuration at runtime with environment variables.
+
+- `WEIBO_CONFIG_FILE` sets an alternate TOML file path.
+- `WEIBO_ACCOUNTS` is a comma-separated list of account names to load from env.
+- For each account name, use `WEIBO_<ACCOUNT>_READ_LINK_URL`, `WEIBO_<ACCOUNT>_MESSAGE_WEBHOOK`, `WEIBO_<ACCOUNT>_AVATAR_URL`, and `WEIBO_<ACCOUNT>_TITLE`.
+- Set `WEIBO_STATUS_ENABLED=false` to disable status messages entirely.
+- Use `WEIBO_STATUS_MESSAGE_WEBHOOK` for the status channel webhook.
+- Set `WEIBO_TRANSLATION_ENABLED=true` to enable translation.
+- Use `WEIBO_TRANSLATION_TARGET_LANGUAGE` for destination language (for example `en`, `ja`, `ko`).
+- Optional: `WEIBO_TRANSLATION_PROVIDER` (default `googletrans`) and `WEIBO_TRANSLATION_TIMEOUT_SECONDS`.
+
+Example:
+
+```bash
+WEIBO_ACCOUNTS=genshin_impact \
+WEIBO_GENSHIN_IMPACT_READ_LINK_URL=https://weibo.com/u/6593199887 \
+WEIBO_GENSHIN_IMPACT_MESSAGE_WEBHOOK=https://discord.com/api/webhooks/... \
+WEIBO_GENSHIN_IMPACT_TITLE=Genshin \
+WEIBO_TRANSLATION_ENABLED=true \
+WEIBO_TRANSLATION_TARGET_LANGUAGE=en \
+WEIBO_STATUS_MESSAGE_WEBHOOK=https://discord.com/api/webhooks/... \
+python app.py
+```
+
+### Translation behavior
+
+- Source language is auto-detected for each post body.
+- If source and destination languages are the same, only the original text is posted.
+- If translation fails (for example upstream changes), the post is still sent and translation is omitted.
 
  
 

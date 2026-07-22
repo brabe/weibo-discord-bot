@@ -1,0 +1,40 @@
+services:
+  weibo-discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: weibo-discord-bot:local
+    container_name: weibo-discord-bot
+    restart: unless-stopped
+    environment:
+      WEIBO_ACCOUNTS: nikki
+      WEIBO_NIKKI_READ_LINK_URL: https://weibo.com/u/6775494073
+      WEIBO_NIKKI_MESSAGE_WEBHOOK: https://discord.com/api/webhooks/1529342878248206337/vkrgLN_A5YDbWz7HO4c7iq6T4V7_eQgUBFOoKJ8PDiSDEczVyhU-x-TBHWAl-4M0w-r9
+      WEIBO_NIKKI_TITLE: ♡
+      WEIBO_STATUS_ENABLED: false
+      WEIBO_TRANSLATION_ENABLED: "true"
+      WEIBO_TRANSLATION_TARGET_LANGUAGE: en
+      WEIBO_TRANSLATION_PROVIDER: googletrans
+      
+      # Use this if you want to point at an alternate TOML file.
+      # WEIBO_CONFIG_FILE: /app/config.toml
+      
+      # Runtime env mode example:
+      # WEIBO_ACCOUNTS: genshin_impact
+      # WEIBO_GENSHIN_IMPACT_READ_LINK_URL: https://weibo.com/u/6593199887
+      # WEIBO_GENSHIN_IMPACT_MESSAGE_WEBHOOK: https://discord.com/api/webhooks/...
+      # WEIBO_GENSHIN_IMPACT_TITLE: Genshin
+      # WEIBO_STATUS_MESSAGE_WEBHOOK: https://discord.com/api/webhooks/...
+      # WEIBO_TRANSLATION_ENABLED: "true"
+      # WEIBO_TRANSLATION_TARGET_LANGUAGE: en
+      # WEIBO_TRANSLATION_PROVIDER: googletrans
+
+      TZ: America/Chicago
+    volumes:
+      # Persist the SQLite database here. The app writes to /app/data/weibo.db.
+      - ./data:/app/data
+      # Optional: mount a local config file if you prefer TOML over env vars.
+      # - ./config.toml:/app/config.toml:ro
+    # This app needs Chrome/Chromium available inside the image, so the Dockerfile
+    # already installs it and the compose file just builds from that Dockerfile.
+    command: ["python", "-u", "app.py"]

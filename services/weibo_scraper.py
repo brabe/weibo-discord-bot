@@ -25,6 +25,7 @@ from core.rate_limiter import RateLimiter
 from core import settings
 from extractors.ajax_extractor import extract_ajax_json, to_list_from_ajax_json
 from extractors.mobile_dom_extractor import extract_mobile_dom_as_list
+from services.translator import TranslationService
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class WeiboScraper:
         self.kawaii_emojis = ["(✿ ♥‿♥)", "(｡♥‿♥｡)"]
         self.kawaii_texts = ["ぴーかぴかに動いてるよ！", "全システム、ばっちりだよ！"]
         self.kawaii_titles = ["ぴょんぴょんアップデート！🐰", "ちゅるちゅるスクリプト！🍜"]
+        self.translation_service = TranslationService(self.config.get('translation', {}))
 
         # Optional kawaii content
         try:
@@ -412,6 +414,7 @@ class WeiboScraper:
 
     def _create_base_embed(self, item: Dict[str, Any], endpoints: Dict[str, str]) -> DiscordEmbed:
         text_raw = item.get('text_raw', '')
+        rendered_text = self.translation_service.render_body(text_raw)
         created_at = item.get('created_at', '')
         title = endpoints.get('title', 'Weibo Post')
         source = item.get('source', 'Unknown')
@@ -456,7 +459,7 @@ class WeiboScraper:
             post_url = f"https://weibo.com/detail/{idstr}"
         except Exception:
             pass
-        embed = DiscordEmbed(title=title, description=text_raw, color=embed_color, url=post_url)
+        embed = DiscordEmbed(title=title, description=rendered_text, color=embed_color, url=post_url)
         embed.set_footer(text=f"来自 {source}")
         try:
             embed.set_timestamp(discord_timestamp)
@@ -492,6 +495,9 @@ class WeiboScraper:
     def start(self):
         logger.info("Starting Weibo scraper...")
         try:
+            status_config = self.config.get('status', {})
+            status_enabled = bool(status_config.get('enabled', True))
+
             for account in self.account_names:
                 try:
                     endpoints = self.config['weibo'][account].copy()
@@ -507,9 +513,11 @@ class WeiboScraper:
                 except Exception as e:
                     logger.error(f"Error scanning account {account}: {e}")
             schedule.every(15).minutes.do(self._scan_all_accounts)
-            schedule.every(6).hours.do(self.send_status, self.config['status']['message_webhook'])
+            if status_enabled:
+                schedule.every(6).hours.do(self.send_status, status_config.get('message_webhook'))
             schedule.every(24).hours.do(self._cleanup_old_data)
-            self.send_status(self.config['status']['message_webhook'])
+            if status_enabled:
+                self.send_status(status_config.get('message_webhook'))
             logger.info("Scraper started. Press Ctrl+C to stop.")
             while True:
                 schedule.run_pending()
@@ -563,10 +571,18 @@ class WeiboScraper:
                 self.image_manager.cleanup_all()
         except Exception as e:
             logger.error(f"Error cleaning up images: {e}")
+        try:
+            if hasattr(self, 'translation_service') and self.translation_service:
+                self.translation_service.close()
+        except Exception as e:
+            logger.error(f"Error cleaning up translator: {e}")
         logger.info("Cleanup completed.")
 
-    def send_status(self, status_webhook_url: str) -> int:
+    def send_status(self, status_webhook_url: str | None) -> int:
         try:
+            if not status_webhook_url:
+                logger.info("Status message disabled; skipping status webhook send")
+                return 204
             webhook_status = DiscordWebhook(url=status_webhook_url)
             embed_color = 16738740
             emoji = random.choice(self.kawaii_emojis)
@@ -720,6 +736,7 @@ class WeiboScraper:
         try:
             retweeted_status = item.get('retweeted_status') or {}
             retweet_text = retweeted_status.get('text_raw') or retweeted_status.get('text') or ''
+            rendered_retweet_text = self.translation_service.render_body(retweet_text)
             user_name = ((retweeted_status.get('user') or {}).get('screen_name')) or '转发'
             image_paths: List[Path] = []
             collage_path: Optional[Path] = None
@@ -768,7 +785,7 @@ class WeiboScraper:
                     webhook_message = self.create_webhook_instance(endpoints)
             else:
                 webhook_message = self.create_webhook_instance(endpoints)
-            embed.add_embed_field(name=f"@{user_name}", value=retweet_text)
+            embed.add_embed_field(name=f"@{user_name}", value=rendered_retweet_text)
             webhook_message.add_embed(embed)
             try:
                 response = webhook_message.execute()

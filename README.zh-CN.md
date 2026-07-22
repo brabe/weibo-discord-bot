@@ -83,9 +83,27 @@ python app.py
    
    [status]
        message_webhook = "YOUR_STATUS_WEBHOOK_URL"
+
+      [translation]
+         enabled = false
+         target_language = "en"
+         provider = "googletrans"
+         timeout_seconds = 8
    ```
 
 - 抽取方式在代码中设置：编辑 `core/settings.py` 的 `EXTRACTION_METHOD` 为 `"ajax_json"` 或 `"mobile_dom"`。
+
+### 运行时环境变量
+
+- `WEIBO_TRANSLATION_ENABLED=true` 开启自动翻译。
+- `WEIBO_TRANSLATION_TARGET_LANGUAGE` 设置目标语言（例如 `en`、`ja`、`ko`）。
+- 可选：`WEIBO_TRANSLATION_PROVIDER`（默认 `googletrans`）和 `WEIBO_TRANSLATION_TIMEOUT_SECONDS`。
+
+### 翻译行为
+
+- 每条微博正文会自动识别源语言。
+- 如果源语言与目标语言一致，只发送原文。
+- 如果翻译失败（例如上游接口变化），消息仍会发送，只是不附带翻译内容。
 
 3. **可选：配置安全设置**
    ```bash

@@ -1,6 +1,7 @@
 discord_webhook==1.2.1
 imageio>=2.33.0
-# numpy and scikit-image will be installed via conda to avoid compilation issues
+numpy>=1.26.0
+scikit-image>=0.22.0
 Pillow>=9.0.0
 pytz>=2021.1
 requests>=2.25.0
@@ -9,5 +10,6 @@ selenium>=4.15.0
 webdriver-manager>=4.0.0
 toml>=0.10.0
 urllib3>=1.26.0
+googletrans>=4.0.0rc1
 # Optional: Windows API support for better signal handling
 pywin32>=228; sys_platform == "win32"

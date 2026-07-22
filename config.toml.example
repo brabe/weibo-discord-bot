@@ -6,3 +6,9 @@
         title = "原神"
 [status]
     message_webhook = "YOUR_STATUS_WEBHOOK_URL"
+
+[translation]
+    enabled = false
+    target_language = "en"
+    provider = "googletrans"
+    timeout_seconds = 8
