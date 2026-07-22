@@ -51,19 +51,19 @@ class WebDriverManager:
     @staticmethod
     def _find_chromedriver() -> str:
         """Find ChromeDriver in system PATH or common locations"""
-        # First try to use webdriver-manager with the latest version
-        try:
-            from webdriver_manager.chrome import ChromeDriverManager
-            # Use the latest version that should be compatible
-            return ChromeDriverManager().install()
-        except Exception as e:
-            logger.warning(f"Failed to use webdriver-manager: {e}")
-        
-        # Check if chromedriver is in PATH
+        # Prefer a bundled/system driver first so container runs do not depend
+        # on a network download at startup.
         chromedriver_path = shutil.which('chromedriver')
         if chromedriver_path:
             return chromedriver_path
-        
+
+        # Fall back to webdriver-manager when no local driver is present.
+        try:
+            from webdriver_manager.chrome import ChromeDriverManager
+            return ChromeDriverManager().install()
+        except Exception as e:
+            logger.warning(f"Failed to use webdriver-manager: {e}")
+
         # Check common macOS locations
         common_paths = [
             '/opt/homebrew/bin/chromedriver',
@@ -77,11 +77,31 @@ class WebDriverManager:
         
         # If nothing works, raise an error
         raise Exception("ChromeDriver not found. Please install it manually: brew install --cask chromedriver")
+
+    @staticmethod
+    def _find_chrome_binary() -> str | None:
+        candidates = [
+            'chromium',
+            'chromium-browser',
+            'google-chrome',
+            'google-chrome-stable',
+        ]
+
+        for candidate in candidates:
+            binary_path = shutil.which(candidate)
+            if binary_path:
+                return binary_path
+
+        return None
     
     @staticmethod
     def _create_chrome_driver(headless: bool = True) -> webdriver.Chrome:
         """Create Chrome driver with optimized options for Weibo scraping"""
         options = WebDriverManager._get_chrome_options(headless)
+        chrome_binary = WebDriverManager._find_chrome_binary()
+        if chrome_binary:
+            options.binary_location = chrome_binary
+
         chromedriver_path = WebDriverManager._find_chromedriver()
         
         logger.info(f"Using ChromeDriver at: {chromedriver_path}")
