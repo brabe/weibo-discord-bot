@@ -32,9 +32,6 @@ def _load_weibo_from_env() -> Dict[str, Any]:
 
     config: Dict[str, Any] = {'weibo': {}, 'status': {}, 'translation': {}}
 
-    if not accounts:
-        return config
-
     for account_name in accounts:
         env_prefix = f'WEIBO_{_normalize_env_key(account_name)}_'
         account_config: Dict[str, Any] = {}
@@ -77,6 +74,10 @@ def _load_weibo_from_env() -> Dict[str, Any]:
     translation_api_key = os.getenv('WEIBO_TRANSLATION_API_KEY')
     if translation_api_key is not None and translation_api_key.strip() != '':
         config['translation']['api_key'] = translation_api_key.strip()
+
+    translation_region = os.getenv('WEIBO_TRANSLATION_REGION')
+    if translation_region is not None and translation_region.strip() != '':
+        config['translation']['region'] = translation_region.strip()
 
     return config
 
@@ -123,12 +124,25 @@ def load_config() -> Dict[str, Any]:
             translation_enabled = _coerce_bool(translation_enabled)
         translation_config['enabled'] = bool(translation_enabled)
         translation_config['provider'] = str(translation_config.get('provider', 'googletrans') or 'googletrans').strip().lower()
+        if translation_config['provider'] not in {'googletrans', 'azure'}:
+            raise ValueError(f"Unsupported translation provider '{translation_config['provider']}'")
         translation_config['timeout_seconds'] = _coerce_int(translation_config.get('timeout_seconds', 8), 8)
+        translation_config['api_url'] = str(translation_config.get('api_url', '') or '').strip()
+        translation_config['api_key'] = str(translation_config.get('api_key', '') or '').strip()
+        translation_config['region'] = str(translation_config.get('region', '') or '').strip()
 
         target_language = str(translation_config.get('target_language', '') or '').strip().lower()
         if translation_config['enabled'] and not target_language:
             raise ValueError("Missing translation target_language when translation is enabled")
         translation_config['target_language'] = target_language
+
+        if translation_config['enabled'] and translation_config['provider'] == 'azure':
+            if not translation_config['api_key']:
+                raise ValueError("Missing translation api_key when Azure translation is enabled")
+            if not translation_config['api_url']:
+                raise ValueError("Missing translation api_url when Azure translation is enabled")
+            if not translation_config['region']:
+                translation_config['region'] = 'global'
 
         if 'weibo' not in config:
             raise ValueError("Missing 'weibo' section in configuration")

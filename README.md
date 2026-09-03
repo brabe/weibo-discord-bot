@@ -87,11 +87,12 @@ python app.py
       [translation]
          enabled = false
          target_language = "en"
-         provider = "googletrans"
-         timeout_seconds = 8
-   ```
-
-- Method selection is set in code: edit `core/settings.py` and change `EXTRACTION_METHOD` to `"ajax_json"` or `"mobile_dom"`.
+      provider = "googletrans"  # or "azure"
+      timeout_seconds = 8
+      # When using Azure Translator:
+      # api_key = "YOUR_AZURE_KEY"
+      # api_url = "https://YOUR_RESOURCE.cognitiveservices.azure.com/"
+      # region = "eastus"
 
 ### Runtime environment variables
 
@@ -104,7 +105,7 @@ You can also provide the same configuration at runtime with environment variable
 - Use `WEIBO_STATUS_MESSAGE_WEBHOOK` for the status channel webhook.
 - Set `WEIBO_TRANSLATION_ENABLED=true` to enable translation.
 - Use `WEIBO_TRANSLATION_TARGET_LANGUAGE` for destination language (for example `en`, `ja`, `ko`).
-- Optional: `WEIBO_TRANSLATION_PROVIDER` (default `googletrans`) and `WEIBO_TRANSLATION_TIMEOUT_SECONDS`.
+- Optional: `WEIBO_TRANSLATION_PROVIDER` (`googletrans` or `azure`), `WEIBO_TRANSLATION_TIMEOUT_SECONDS`, `WEIBO_TRANSLATION_API_KEY`, `WEIBO_TRANSLATION_API_URL`, and `WEIBO_TRANSLATION_REGION`.
 
 Example:
 
@@ -115,6 +116,10 @@ WEIBO_GENSHIN_IMPACT_MESSAGE_WEBHOOK=https://discord.com/api/webhooks/... \
 WEIBO_GENSHIN_IMPACT_TITLE=Genshin \
 WEIBO_TRANSLATION_ENABLED=true \
 WEIBO_TRANSLATION_TARGET_LANGUAGE=en \
+WEIBO_TRANSLATION_PROVIDER=azure \
+WEIBO_TRANSLATION_API_KEY=... \
+WEIBO_TRANSLATION_API_URL=https://YOUR_RESOURCE.cognitiveservices.azure.com/ \
+WEIBO_TRANSLATION_REGION=eastus \
 WEIBO_STATUS_MESSAGE_WEBHOOK=https://discord.com/api/webhooks/... \
 python app.py
 ```
