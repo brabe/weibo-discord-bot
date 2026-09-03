@@ -5,6 +5,8 @@ import inspect
 import logging
 from typing import Any, Dict, Optional
 
+import requests
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,10 @@ class TranslationService:
         self.provider = str(cfg.get("provider", "googletrans") or "googletrans").strip().lower()
         self.target_language = _normalize_language_code(str(cfg.get("target_language", "") or ""))
         self.timeout_seconds = int(cfg.get("timeout_seconds", 8) or 8)
+        self.api_key = str(cfg.get("api_key", "") or "").strip()
+        self.api_url = str(cfg.get("api_url", "") or "").strip()
+        self.region = str(cfg.get("region", "") or "").strip()
+        self.api_version = str(cfg.get("api_version", "3.0") or "3.0").strip()
 
         self._client: Any = None
         self._provider_available = False
@@ -41,19 +47,83 @@ class TranslationService:
         self._initialize_provider()
 
     def _initialize_provider(self) -> None:
-        if self.provider != "googletrans":
-            logger.warning("Unsupported translation provider '%s'; translation disabled", self.provider)
-            self.enabled = False
+        if self.provider == "googletrans":
+            try:
+                from googletrans import Translator  # type: ignore
+
+                self._client = Translator(timeout=self.timeout_seconds)
+                self._provider_available = True
+            except Exception as exc:
+                logger.warning("Failed to initialize translation provider '%s': %s", self.provider, exc)
+                self._provider_available = False
             return
 
-        try:
-            from googletrans import Translator  # type: ignore
+        if self.provider == "azure":
+            if not self.api_key or not self.api_url:
+                logger.warning(
+                    "Azure translation provider requires api_key and api_url; translation disabled"
+                )
+                self.enabled = False
+                return
 
-            self._client = Translator(timeout=self.timeout_seconds)
+            # Azure REST API uses the subscription key and optional region header.
             self._provider_available = True
+            return
+
+        logger.warning("Unsupported translation provider '%s'; translation disabled", self.provider)
+        self.enabled = False
+
+    def _translate_azure(self, text: str) -> str:
+        try:
+            base = self.api_url.rstrip("/")
+            if "/translator/text/" in base:
+                translate_url = f"{base}/translate"
+            else:
+                translate_url = f"{base}/translator/text/v{self.api_version}/translate"
+
+            params = {
+                "api-version": self.api_version,
+                "to": self.target_language,
+            }
+            headers = {
+                "Ocp-Apim-Subscription-Key": self.api_key,
+                "Content-Type": "application/json",
+            }
+            if self.region:
+                headers["Ocp-Apim-Subscription-Region"] = self.region
+
+            resp = requests.post(
+                translate_url,
+                params=params,
+                headers=headers,
+                json=[{"text": text}],
+                timeout=self.timeout_seconds,
+            )
+            resp.raise_for_status()
+            response = resp.json()
+            if not response:
+                return ""
+
+            payload = response[0] if isinstance(response, list) else {}
+            translations = payload.get("translations", []) if isinstance(payload, dict) else []
+            for item in translations:
+                translated_text = item.get("text", "") if isinstance(item, dict) else ""
+                if translated_text:
+                    return str(translated_text).strip()
+
+            detected = payload.get("detectedLanguage") if isinstance(payload, dict) else None
+            if isinstance(detected, dict):
+                language = str(detected.get("language", "") or "")
+                if language and _normalize_language_code(language) == _normalize_language_code(self.target_language):
+                    return ""
+
+            return ""
+        except requests.RequestException as exc:
+            logger.warning("Azure translation failed: %s", exc)
+            return ""
         except Exception as exc:
-            logger.warning("Failed to initialize translation provider '%s': %s", self.provider, exc)
-            self._provider_available = False
+            logger.warning("Azure translation failed: %s", exc)
+            return ""
 
     def _resolve_maybe_awaitable(self, value: Any) -> Any:
         if not inspect.isawaitable(value):
@@ -74,6 +144,14 @@ class TranslationService:
             return source_text or ""
 
         try:
+            if self.provider == "azure":
+                translated_text = self._translate_azure(text)
+                if not translated_text:
+                    return source_text
+                if translated_text == text:
+                    return source_text
+                return f"{source_text}\n---\n{translated_text}"
+
             detected_raw = ""
             detected = self._resolve_maybe_awaitable(self._client.detect(text))
             detected_raw = str(getattr(detected, "lang", "") or "")

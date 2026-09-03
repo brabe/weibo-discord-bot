@@ -9,13 +9,16 @@ services:
     environment:
       WEIBO_ACCOUNTS: nikki
       WEIBO_NIKKI_READ_LINK_URL: https://weibo.com/u/6775494073
-      WEIBO_NIKKI_MESSAGE_WEBHOOK: https://discord.com/api/webhooks/1529342878248206337/vkrgLN_A5YDbWz7HO4c7iq6T4V7_eQgUBFOoKJ8PDiSDEczVyhU-x-TBHWAl-4M0w-r9
+      WEIBO_NIKKI_MESSAGE_WEBHOOK: https://discord.com/api/webhooks/1544895120703496252/nlAkP0Tq5YRps9ctVs-Ayyk4kcM8kVG-JhCX7I480ZKmCJsU2jryvJbBp7QBQiW0wKau
       WEIBO_NIKKI_TITLE: ♡
       WEIBO_STATUS_ENABLED: false
       WEIBO_TRANSLATION_ENABLED: "true"
       WEIBO_TRANSLATION_TARGET_LANGUAGE: en
-      WEIBO_TRANSLATION_PROVIDER: googletrans
-      
+      WEIBO_TRANSLATION_PROVIDER: azure
+      WEIBO_TRANSLATION_API_KEY: 
+      WEIBO_TRANSLATION_API_URL: 
+      WEIBO_TRANSLATION_REGION: global
+
       # Use this if you want to point at an alternate TOML file.
       # WEIBO_CONFIG_FILE: /app/config.toml
       

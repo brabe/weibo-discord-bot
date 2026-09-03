@@ -62,6 +62,20 @@ class _FakeAsyncFailTranslator:
         return _TranslateResult("unused")
 
 
+class _FakeAzureTranslateResult:
+    def __init__(self, text: str, detected_language: str = "zh"):
+        self.detected_language = types.SimpleNamespace(language=detected_language)
+        self.translations = [types.SimpleNamespace(text=text, to="en")]
+
+
+class _FakeAzureHttpResponse:
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return [{"translations": [{"text": "Hello world", "to": "en"}], "detectedLanguage": {"language": "zh"}}]
+
+
 class TranslationServiceTests(unittest.TestCase):
     def _patch_googletrans(self):
         fake_module = types.SimpleNamespace(Translator=_FakeTranslator)
@@ -128,6 +142,20 @@ class TranslationServiceTests(unittest.TestCase):
 
         self.assertEqual(first, "你好\n---\nHello")
         self.assertEqual(second, "世界\n---\nHello")
+
+    def test_azure_translator_supports_translation(self) -> None:
+        with patch("services.translator.requests.post", return_value=_FakeAzureHttpResponse()):
+            service = TranslationService({
+                "enabled": True,
+                "target_language": "en",
+                "provider": "azure",
+                "api_key": "test-key",
+                "api_url": "https://example.cognitiveservices.azure.com/",
+                "region": "eastus",
+            })
+            rendered = service.render_body("你好世界")
+
+        self.assertEqual(rendered, "你好世界\n---\nHello world")
 
 
 if __name__ == "__main__":

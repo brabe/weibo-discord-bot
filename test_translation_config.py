@@ -77,6 +77,47 @@ class TranslationConfigTests(unittest.TestCase):
         self.assertTrue(cfg["translation"]["enabled"])
         self.assertEqual(cfg["translation"]["target_language"], "en")
 
+    def test_azure_provider_requires_api_key_and_url(self) -> None:
+        config_path = self._write_config(
+            BASE_CONFIG
+            + """
+[translation]
+  enabled = true
+  target_language = "en"
+  provider = "azure"
+"""
+        )
+        env = self._clean_env()
+        env["WEIBO_CONFIG_FILE"] = config_path
+
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(ValueError):
+                load_config()
+
+    def test_azure_provider_accepts_valid_credentials(self) -> None:
+        config_path = self._write_config(
+            BASE_CONFIG
+            + """
+[translation]
+  enabled = true
+  target_language = "en"
+  provider = "azure"
+  api_key = "key-123"
+  api_url = "https://example.cognitiveservices.azure.com/"
+  region = "eastus"
+"""
+        )
+        env = self._clean_env()
+        env["WEIBO_CONFIG_FILE"] = config_path
+
+        with patch.dict(os.environ, env, clear=True):
+            cfg = load_config()
+
+        self.assertEqual(cfg["translation"]["provider"], "azure")
+        self.assertEqual(cfg["translation"]["api_key"], "key-123")
+        self.assertEqual(cfg["translation"]["api_url"], "https://example.cognitiveservices.azure.com/")
+        self.assertEqual(cfg["translation"]["region"], "eastus")
+
 
 if __name__ == "__main__":
     unittest.main()

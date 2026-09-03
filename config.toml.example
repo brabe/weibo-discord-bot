@@ -10,5 +10,9 @@
 [translation]
     enabled = false
     target_language = "en"
-    provider = "googletrans"
+    provider = "googletrans"  # use "azure" for Azure Translator
     timeout_seconds = 8
+    # Required when provider = "azure"
+    # api_key = "YOUR_AZURE_TRANSLATOR_KEY"
+    # api_url = "https://YOUR_RESOURCE.cognitiveservices.azure.com/"
+    # region = "eastus"
